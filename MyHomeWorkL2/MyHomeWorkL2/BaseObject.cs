@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Drawing;
+using MyHomeWorkL2.Interface;
+
 namespace MyHomeWorkL2
 {
-    public class BaseObject
+    public abstract class BaseObject : ICollision
     {
         protected Point pos;
         protected Point dir;
         protected Size size;
+
         /// <summary>
         /// Конструктор звезды.
         /// </summary>
@@ -20,20 +23,16 @@ namespace MyHomeWorkL2
             this.size = size;
         }
         /// <summary>
-        /// Виртуальный метод вывода звезд.
+        /// Абстрактный метод вывода звезд.
         /// </summary>
-        virtual public void Draw()
-        {
-            DrawCrossStar();
-        }
+        abstract public void Draw();
+
+
         /// <summary>
-        /// Виртуальный метод изменения положения.
+        /// Абстрактный метод изменения положения.
         /// </summary>
-        virtual public void Update()
-        {
-            pos.X = pos.X + dir.X;
-            if (pos.X < 0) pos.X = Game.Width + size.Width;
-        }
+        abstract public void Update();
+
         /// <summary>
         /// Виртуальный метод создания звезд.
         /// </summary>
@@ -41,6 +40,20 @@ namespace MyHomeWorkL2
         {
             Game.buffer.Graphics.DrawLine(Pens.White, pos.X, pos.Y, pos.X + size.Width, pos.Y + size.Height);
             Game.buffer.Graphics.DrawLine(Pens.White, pos.X + size.Width, pos.Y, pos.X, pos.Y + size.Height);
+        }
+
+        /// <summary>
+        /// Абстрактный метод регенерации при столкновении.
+        /// </summary>
+        abstract public void New();
+
+        public bool Collision(ICollision o)
+        {
+            if (o.Rect.IntersectsWith(this.Rect)) return true; else return false;
+        }
+        public Rectangle Rect
+        {
+            get { return new Rectangle(pos, size); }
         }
     }
 }

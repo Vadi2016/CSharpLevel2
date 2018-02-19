@@ -5,11 +5,14 @@ using System.Drawing;
 using System.Windows.Forms;
 namespace MyHomeWorkL2
 {
-    public class Game
+    public static class Game
     {
         static BufferedGraphicsContext context;
         static public BufferedGraphics buffer;  // буфер
         static public BaseObject[] objs;        // массив звезд
+        static public BaseObject[] asteroids;        // массив астероидов
+        static public BaseObject[] bullet;        // массив пуль
+
         // Свойства
         // Ширина и высота игрового поля
         static public int Width { get; set; }
@@ -23,15 +26,13 @@ namespace MyHomeWorkL2
         /// <param name="form">Объект класса Form, включающая в себя размеры окна формы.</param>
         static public void Init(Form form)
         {
-            // Графическое устройство для вывода графики
-            Graphics g;
+            Graphics g;   // Графическое устройство для вывода графики
 
-            // вызов метода Load, заполняющего массив
-            Load();
+            Load();  // вызов метода Load, заполняющего массив
 
             // предоставляет доступ к главному буферу графического контекста для текущего приложения
             context = BufferedGraphicsManager.Current;
-            g = form.CreateGraphics(); // Создаём объект - поверхность рисования и связываем его с формой
+            g = form.CreateGraphics();  // Создаём объект - поверхность рисования и связываем его с формой
 
             // Запоминаем размеры формы
             Width = form.Width;
@@ -52,16 +53,22 @@ namespace MyHomeWorkL2
         static public void Draw()
         {
             //buffer.Graphics.Clear(Color.BlueViolet);     // <---- Скучный фон
-            string path = Path.GetFullPath("Звездная_ночь.jpg");
-
+            string path = Path.GetFullPath("Rosette_nebula_Lanoue.png");    // Путь к файлу
 
             // Проверяем вывод графики
             Image newImage = Image.FromFile(path);
             buffer.Graphics.DrawImage(newImage, 0, 0, Width, Height);
 
             // Рисуем объекты
-            foreach (BaseObject obj in objs)
+            /* 
+             * foreach (BaseObject obj in objs)
                 obj.Draw();
+             */
+            foreach (Asteroid obj in asteroids)
+                obj.Draw();
+            foreach (Bullet obj in bullet)
+                obj.Draw();
+
             buffer.Render();
         }
         /// <summary>
@@ -69,27 +76,65 @@ namespace MyHomeWorkL2
         /// </summary>
         static public void Update()
         {
-            foreach (BaseObject obj in objs)
-                obj.Update();
+            //foreach (BaseObject obj in objs)
+            //obj.Update();
+            foreach (Asteroid a in asteroids)
+            {
+                foreach (Bullet b in bullet)
+                {
+                    a.Update();
+                    b.Update();
+                    if (a.Collision(b)) { System.Media.SystemSounds.Hand.Play(); b.New(); a.New(); }
+                }
+            }
+
         }
         /// <summary>
-        /// Загрузка в массива установленных звезд.
+        /// Загрузка в массива установленных звезд, пуль и астероидов.
         /// </summary>
         static public void Load()
         {
-            objs = new BaseObject[30];
+            //objs = new BaseObject[40];
+            asteroids = new Asteroid[10];
+            bullet = new Bullet[10];
 
-            //  Звезды-кресты большие
-            for (int i = 0; i < objs.Length / 3; i++)
-                objs[i] = new BaseObject(new Point(Width, i * 20), new Point(-i, -i), new Size(10, 10));
+            int astH = Execut(10);
+            int astW = Execut(-10);     //  Неверный размер! Должен быть 10.
 
+            int bulH = Execut(5);
+            int bulW = Execut(5);
+
+            // Астероиды
+            for (int i = 0; i < asteroids.Length / 2; i++)
+                asteroids[i] = new Asteroid(new Point(790, (Height / 2) + 10), new Point(i, i), new Size(astW, astH));
+            // Астероиды
+            for (int i = asteroids.Length / 2; i < asteroids.Length; i++)
+                asteroids[i] = new Asteroid(new Point(790, (Height / 2) + 10), new Point(i, -i), new Size(astW, astH));
+
+            // Пули
+            for (int i = 0; i < bullet.Length / 2; i++)
+                bullet[i] = new Bullet(new Point(10, (Height / 2) + 10), new Point(i, i), new Size(bulW, bulH));
+            // Пули
+            for (int i = bullet.Length / 2; i < bullet.Length; i++)
+                bullet[i] = new Bullet(new Point(10, (Height / 2) + 10), new Point(i, -i), new Size(bulW, bulH));
+
+            #region // Создание звезд   //
+            /*
+            //  Звезды-кресты 
+            for (int i = 0; i < objs.Length / 4; i++)
+                objs[i] = new StarNew(new Point(400, 300), new Point(-i, -i), new Size(5, 5));
             //  Золотые звезды
-            for (int i = objs.Length / 3; i < (objs.Length * 2) / 3; i++)
-                objs[i] = new Star(new Point(Width, i * 20), new Point(-i, 0), new Size(5, 5));
+            for (int i = objs.Length / 4; i < (objs.Length * 2) / 4; i++)
+                objs[i] = new Star(new Point(400, 300), new Point(i, i), new Size(5, 5));
+            //  Звезды-кресты
+            for (int i = (objs.Length * 2) / 4; i < (objs.Length * 3) / 4; i++)
+                objs[i] = new StarNew(new Point(400, 300), new Point(i, -i), new Size(5, 5));
+            //  Звезды-кресты
+            for (int i = (objs.Length * 3) / 4; i < objs.Length; i++)
+                objs[i] = new StarNew(new Point(400, 300), new Point(-i, i), new Size(5, 5));
+            */
+            #endregion
 
-            //  Звезды-кресты маленькие
-           // for (int i = (objs.Length * 2) / 3; i < objs.Length; i++)
-             //   objs[i] = new StarNew(new Point(Width, i * 20), new Point(-i, 0), new Size(5, 5));
         }
         /// <summary>
         ///  Обработчик таймера.
@@ -100,6 +145,25 @@ namespace MyHomeWorkL2
         {
             Draw();
             Update();
+        }
+
+        /// <summary>
+        /// Срабатываемое исключение на ошибку размера.
+        /// </summary>
+        /// <param name="width">Ширина</param>
+        /// <param name="height">Высота</param>
+        static int Execut(int width)
+        {
+            try
+            {
+
+                if (width < 0) throw new MyException();
+                return width;
+            }
+            catch (MyException)
+            {
+                return width = 10;
+            }
         }
     }
 }
