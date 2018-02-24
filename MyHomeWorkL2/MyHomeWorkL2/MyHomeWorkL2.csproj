@@ -32,6 +32,7 @@
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Data" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
@@ -39,10 +40,40 @@
     <Compile Include="BaseObject.cs" />
     <Compile Include="Game.cs" />
     <Compile Include="Star.cs" />
+    <Compile Include="Interface\ICollision.cs" />
+    <Compile Include="Asteroid.cs" />
+    <Compile Include="Bullet.cs" />
+    <Compile Include="Log.cs" />
+    <Compile Include="Planet.cs" />
+    <Compile Include="Graund.cs" />
+    <Compile Include="Galaxy.cs" />
+    <Compile Include="Repairs.cs" />
+    <Compile Include="Ship.cs" />
+    <Compile Include="SplashScreen.Designer.cs" />
+    <Compile Include="SplashScreen.cs" />
+    <Compile Include="Properties\Resources.Designer.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Звездная_ночь.jpg" />
-    <None Include="star2.png" />
+    <None Include="SplashScreen.resx" />
+    <None Include="Properties\Resources.resx" />
+    <None Include="Resources\backgraund.jpg" />
+    <None Include="Resources\star2.png" />
+    <None Include="Resources\buum.png" />
+    <None Include="Resources\Bullet-PNG.png" />
+    <None Include="Resources\asteroid-icon.png" />
+    <None Include="App.config" />
+    <None Include="Resources\star3.png" />
+    <None Include="Resources\aster2.png" />
+    <None Include="Resources\cruiser.png" />
+    <None Include="Resources\home_galaxy.png" />
+    <None Include="Resources\planet.png" />
+    <None Include="Resources\pluto.jpg" />
+    <None Include="Resources\repaire.png" />
+    <None Include="MyHomeWorkL2.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Interface\" />
+    <Folder Include="Resources\" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

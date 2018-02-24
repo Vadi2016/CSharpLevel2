@@ -3,167 +3,241 @@
 using System.IO;
 using System.Drawing;
 using System.Windows.Forms;
+using System.Collections.Generic;
+using System.Threading;
+
 namespace MyHomeWorkL2
 {
     public static class Game
     {
-        static BufferedGraphicsContext context;
-        static public BufferedGraphics buffer;  // буфер
-        static public BaseObject[] objs;        // массив звезд
-        static public BaseObject[] asteroids;        // массив астероидов
-        static public BaseObject[] bullet;        // массив пуль
-
-        // Свойства
-        // Ширина и высота игрового поля
+        static BaseObject[] objs; // массив хранит звезды и планеты
+        static List<Asteroid> aster = new List<Asteroid>();
+        static Graund graund;
+        static List<Repairs> repairs = new List<Repairs>();
+        static Galaxy galaxy;
+        static Ship ship;
+        static public int shipEnergy;
+        static int shootCount = 0; // количество выстрелов( для счета)
+        static int level = 1;
+        static int score = 0;
+        static public Random random = new Random();
+        static public System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
+        static BufferedGraphicsContext context; // объект контекст
+        static public BufferedGraphics buffer;  // объект буфер
+        static List<Bullet> bullets = new List<Bullet>();
         static public int Width { get; set; }
         static public int Height { get; set; }
+
+
         static Game()
         {
         }
+
         /// <summary>
-        /// Сборка графического окна, установка высоты и ширины окна. Присутствует таймер.
+        /// метод инициализирует игровое поле
         /// </summary>
-        /// <param name="form">Объект класса Form, включающая в себя размеры окна формы.</param>
+        /// <param name="form"></param>
         static public void Init(Form form)
         {
-            Graphics g;   // Графическое устройство для вывода графики
-
-            Load();  // вызов метода Load, заполняющего массив
-
-            // предоставляет доступ к главному буферу графического контекста для текущего приложения
-            context = BufferedGraphicsManager.Current;
-            g = form.CreateGraphics();  // Создаём объект - поверхность рисования и связываем его с формой
-
-            // Запоминаем размеры формы
+            Graphics g; // объект типа графикс
+            context = BufferedGraphicsManager.Current; //предоставляет доступ к главному буферу графического контекста
+            g = form.CreateGraphics();
             Width = form.Width;
             Height = form.Height;
-
-            // Связываем буфер в памяти с графическим объектом.
-            // для того, чтобы рисовать в буфере
             buffer = context.Allocate(g, new Rectangle(0, 0, Width, Height));
-
-            Timer timer = new Timer();
+            Load();
             timer.Interval = 100;
-            timer.Start();
             timer.Tick += Timer_Tick;
+            timer.Start();
+            form.KeyDown += Form_KeyDown;
+            Ship.MessageDie += Finish;
+
         }
-        /// <summary>
-        /// Создание фона на основе фотографии туманности. Вывод каждой звезды на экран через цикл.
-        /// </summary>
-        static public void Draw()
+
+        private static void Form_KeyDown(object sender, KeyEventArgs e)
         {
-            //buffer.Graphics.Clear(Color.BlueViolet);     // <---- Скучный фон
-            string path = Path.GetFullPath("Rosette_nebula_Lanoue.png");    // Путь к файлу
-
-            // Проверяем вывод графики
-            Image newImage = Image.FromFile(path);
-            buffer.Graphics.DrawImage(newImage, 0, 0, Width, Height);
-
-            // Рисуем объекты
-            /* 
-             * foreach (BaseObject obj in objs)
-                obj.Draw();
-             */
-            foreach (Asteroid obj in asteroids)
-                obj.Draw();
-            foreach (Bullet obj in bullet)
-                obj.Draw();
-
-            buffer.Render();
-        }
-        /// <summary>
-        /// Обновление позиции каждой звезды.
-        /// </summary>
-        static public void Update()
-        {
-            //foreach (BaseObject obj in objs)
-            //obj.Update();
-            foreach (Asteroid a in asteroids)
+            Log myLogMessage = new Log();
+            if (e.KeyCode == Keys.Space)
             {
-                foreach (Bullet b in bullet)
-                {
-                    a.Update();
-                    b.Update();
-                    if (a.Collision(b)) { System.Media.SystemSounds.Hand.Play(); b.New(); a.New(); }
-                }
-            }
+                bullets.Add(new Bullet(new Point(ship.Rect.X + 100, ship.Rect.Y + 20), new Point(4, 0), new Size(4, 1)));
+                shootCount++;
+                myLogMessage.PrintMessage(new LogMessage(Bullet.MessageShot));
+            }// если нажали клавишу ControlKey, то создается пулька перед кораблем
+            if (e.KeyCode == Keys.Up) ship.Up();
+            //если клавиша вверх - событие ship.Up
+            if (e.KeyCode == Keys.Down) ship.Down();
+            // если клавиша вниз - ship.Down
+            if (e.KeyCode == Keys.Right) ship.Right();
+            if (e.KeyCode == Keys.Left) ship.Left();
 
         }
+
         /// <summary>
-        /// Загрузка в массива установленных звезд, пуль и астероидов.
+        /// Обработчик таймера
         /// </summary>
-        static public void Load()
-        {
-            //objs = new BaseObject[40];
-            asteroids = new Asteroid[10];
-            bullet = new Bullet[10];
-
-            int astH = Execut(10);
-            int astW = Execut(-10);     //  Неверный размер! Должен быть 10.
-
-            int bulH = Execut(5);
-            int bulW = Execut(5);
-
-            // Астероиды
-            for (int i = 0; i < asteroids.Length / 2; i++)
-                asteroids[i] = new Asteroid(new Point(790, (Height / 2) + 10), new Point(i, i), new Size(astW, astH));
-            // Астероиды
-            for (int i = asteroids.Length / 2; i < asteroids.Length; i++)
-                asteroids[i] = new Asteroid(new Point(790, (Height / 2) + 10), new Point(i, -i), new Size(astW, astH));
-
-            // Пули
-            for (int i = 0; i < bullet.Length / 2; i++)
-                bullet[i] = new Bullet(new Point(10, (Height / 2) + 10), new Point(i, i), new Size(bulW, bulH));
-            // Пули
-            for (int i = bullet.Length / 2; i < bullet.Length; i++)
-                bullet[i] = new Bullet(new Point(10, (Height / 2) + 10), new Point(i, -i), new Size(bulW, bulH));
-
-            #region // Создание звезд   //
-            /*
-            //  Звезды-кресты 
-            for (int i = 0; i < objs.Length / 4; i++)
-                objs[i] = new StarNew(new Point(400, 300), new Point(-i, -i), new Size(5, 5));
-            //  Золотые звезды
-            for (int i = objs.Length / 4; i < (objs.Length * 2) / 4; i++)
-                objs[i] = new Star(new Point(400, 300), new Point(i, i), new Size(5, 5));
-            //  Звезды-кресты
-            for (int i = (objs.Length * 2) / 4; i < (objs.Length * 3) / 4; i++)
-                objs[i] = new StarNew(new Point(400, 300), new Point(i, -i), new Size(5, 5));
-            //  Звезды-кресты
-            for (int i = (objs.Length * 3) / 4; i < objs.Length; i++)
-                objs[i] = new StarNew(new Point(400, 300), new Point(-i, i), new Size(5, 5));
-            */
-            #endregion
-
-        }
-        /// <summary>
-        ///  Обработчик таймера.
-        /// </summary>
-        /// <param name="sender">Объект таймера.</param>
-        /// <param name="e">Событие.</param>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private static void Timer_Tick(object sender, EventArgs e)
         {
             Draw();
             Update();
+            Level();
         }
 
         /// <summary>
-        /// Срабатываемое исключение на ошибку размера.
+        /// проверка на начало нового уровня
         /// </summary>
-        /// <param name="width">Ширина</param>
-        /// <param name="height">Высота</param>
-        static int Execut(int width)
+        private static void Level()
         {
-            try
+            bool flag = true;
+            foreach (var item in aster)
             {
+                if (item == null) flag = false;
+                else
+                {
+                    flag = true;
+                    break;
+                }
+            }
+            if (!flag)
+            {
+                level++;
+                if (level == 11)
+                {
+                    Finish();
+                    return;
+                }
+                flag = true;
+                buffer.Graphics.DrawString($"Level {level}", new Font(FontFamily.GenericSansSerif, 60, FontStyle.Underline), Brushes.White, 200, 100);
+                buffer.Render();
+                Load();
+                bullets.Clear();
+                Thread.Sleep(1000);
+            }
+        }
 
-                if (width < 0) throw new MyException();
-                return width;
-            }
-            catch (MyException)
+        /// <summary>
+        ///  загружает данные для игры
+        /// </summary>
+        static public void Load()
+        {
+            Log myLogMessage = new Log();
+            objs = new BaseObject[25];
+            for (int i = 0; i < 23; i++)
             {
-                return width = 10;
+                objs[i] = new Star(new Point(random.Next(800), random.Next(350)), new Point(-random.Next(5, 15), 0), new Size(random.Next(5, 30), random.Next(5, 30)));
             }
+
+            for (int i = 23; i < 25; i++)
+            {
+                objs[i] = new Planet(new Point(random.Next(1000), random.Next(350)), new Point(-random.Next(3, 17), 0), new Size(random.Next(70, 80), random.Next(70, 80)));
+            }
+
+            galaxy = new Galaxy(new Point(-180, 10), new Point(0, 0), new Size(100, 100));
+            myLogMessage.PrintMessage(new LogMessage(galaxy.Message));
+            graund = new Graund(new Point(0, 440), new Point(-3, 0), new Size(500, 200));
+            myLogMessage.PrintMessage(new LogMessage(graund.Message));
+
+            for (int i = 0; i < 5 + level * 2; i++)
+            {
+                aster.Add(new Asteroid(new Point(random.Next(1000, 1500), random.Next(400)), new Point(-(random.Next(9, 12) + level), 0), new Size(random.Next(25, 30), random.Next(25, 30))));
+                myLogMessage.PrintMessage(new LogMessage(Asteroid.MessageCreate));
+            }
+            ship = new Ship(new Point(10, 200), new Point(5, 10), new Size(50, 50));
+            myLogMessage.PrintMessage(new LogMessage(ship.Message));
+        }
+
+        /// <summary>
+        /// метод отрисовки происходящего на экране
+        /// </summary>
+        static public void Draw()
+        {
+            buffer.Graphics.Clear(Color.Black);
+            galaxy.Draw();
+            foreach (BaseObject obj in objs) obj.Draw();
+            foreach (Asteroid ast in aster) if (ast != null) ast.Draw();
+            graund.Draw();
+            foreach (Bullet b in bullets) b.Draw();
+            ship.Draw();
+            buffer.Graphics.DrawString("String: " + ship.Energy, SystemFonts.DefaultFont, Brushes.White, 0, 0);
+            if (random.Next(500) == 1 && repairs.Count <= 2)
+            {
+                repairs.Add(new Repairs(new Point(1000, random.Next(400)), new Point(-random.Next(5, 15), 0), new Size(20, 20)));
+            }
+            foreach (var item in repairs) item.Draw(); // прорисовка ремонта корабля
+            buffer.Render();
+        }
+
+        /// <summary>
+        /// метод обновляющий координаты объекта
+        /// </summary>
+        static public void Update()
+        {
+            Log myLogMessage = new Log();
+            foreach (BaseObject obj in objs) obj.Update();
+            graund.Update();
+            if (bullets != null)
+            {
+                foreach (Bullet b in bullets) b.Update();
+            }
+            for (int i = 0; i < aster.Count; i++)
+            {
+                if (aster[i] != null)
+                {
+                    aster[i].Update();
+                    for (int j = 0; j < bullets.Count; j++)
+                        if (aster[i] != null && bullets[j].Collision(aster[i]))
+                        {
+                            System.Media.SystemSounds.Hand.Play();
+                            aster[i] = null;
+                            bullets.RemoveAt(j);
+                            myLogMessage.PrintMessage(new LogMessage(Asteroid.MessageDestroy));
+                            score += 50 - shootCount;
+                            continue;
+                        }
+                    if (aster[i] != null && ship.Collision(aster[i]))
+                    {
+                        ship.EnergyLow(random.Next(1, 10));
+                        myLogMessage.PrintMessage(new LogMessage(Ship.MessageDamege));
+                        System.Media.SystemSounds.Asterisk.Play();
+                        if (ship.Energy <= 0)
+                        {
+                            ship.Die();
+                            score = 0;
+                        }
+                    }
+                }
+            }
+
+
+            for (int i = 0; i < repairs.Count; i++)
+            {
+                if (repairs[i] != null)
+                {
+                    repairs[i].Update();
+                    for (int j = 0; j < repairs.Count; j++)
+                        if (repairs[j] != null && ship.Collision(repairs[j]))
+                        {
+                            ship.EnergyUp(repairs[j].Power);
+                            repairs.RemoveAt(i);
+                            if (ship.Energy >= 100) ship.Energy = 100;
+                            myLogMessage.PrintMessage(Ship.MessageRepaire);
+                            continue;
+                        }
+                }
+            }
+        }
+        /// <summary>
+        /// Метод финиш
+        /// </summary>
+        static public void Finish()
+        {
+            Log myLogMessage = new Log();
+            timer.Stop();
+            buffer.Graphics.DrawString("The End", new Font(FontFamily.GenericSansSerif, 40, FontStyle.Underline), Brushes.White, 200, 100);
+            if (score != 0) buffer.Graphics.DrawString($"Win! score: {score}", new Font(FontFamily.GenericSansSerif, 40, FontStyle.Underline), Brushes.White, 200, 300);
+            myLogMessage.Start();
+            buffer.Render();
         }
     }
 }
